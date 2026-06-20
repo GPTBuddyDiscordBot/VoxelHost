@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VoxelHost — Free VoxelCraft Server Hosting</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0e1a;--panel:#16213e;--border:#2a2a4a;--accent:#5a8a3a;--light:#7fd0ff;--text:#e0e0e0;--muted:#888;--danger:#8a3a2a;--warn:#e85820;--ok:#4CAF50}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh}
+.navbar{background:linear-gradient(135deg,#16213e,#0f3460);padding:0 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:4px solid var(--accent);height:60px;position:sticky;top:0;z-index:100}
+.navbar .logo{font-size:1.4em;font-weight:900;color:#fff;text-shadow:2px 2px 0 #000;cursor:pointer}
+.navbar .logo span{color:var(--accent)}
+.navbar nav{display:flex;gap:4px}
+.navbar nav a{padding:8px 14px;color:#a0c0a0;text-decoration:none;font-size:13px;font-weight:600;border-radius:4px;cursor:pointer;transition:all .2s}
+.navbar nav a:hover{background:rgba(90,138,58,.2);color:#fff}
+.navbar nav a.active{background:var(--accent);color:#fff}
+.container{max-width:1300px;margin:0 auto;padding:20px}
+.hidden{display:none!important}
+.hero{text-align:center;padding:40px 20px;background:linear-gradient(135deg,rgba(22,33,62,.5),rgba(15,52,96,.3));border-radius:12px;margin-bottom:25px}
+.hero h1{font-size:2.5em;color:#fff;text-shadow:3px 3px 0 #000;margin-bottom:8px}
+.hero p{font-size:1.1em;color:#a0c0a0;margin-bottom:20px}
+.hero .create-btn{display:inline-block;padding:14px 40px;background:var(--accent);color:#fff;border:2px solid #000;border-radius:8px;font-size:1.1em;font-weight:900;text-shadow:2px 2px 0 #1a1a1a;cursor:pointer;box-shadow:0 4px 0 #3a6a1a;transition:all .15s}
+.hero .create-btn:hover{transform:translateY(-2px);box-shadow:0 6px 0 #3a6a1a}
+.hero .create-btn:active{transform:translateY(2px);box-shadow:0 2px 0 #3a6a1a}
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:15px;margin-bottom:25px}
+.stat-card{background:var(--panel);border:2px solid var(--border);border-radius:8px;padding:16px;display:flex;align-items:center;gap:12px}
+.stat-card .icon{font-size:2em;width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:rgba(90,138,58,.15);border-radius:8px}
+.stat-card .num{font-size:1.8em;font-weight:900;color:var(--light);line-height:1}
+.stat-card .label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+.section-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.section-title h2{font-size:1.4em;color:#fff}
+.server-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:20px}
+.server-card{background:var(--panel);border:2px solid var(--border);border-radius:10px;overflow:hidden;transition:transform .2s,border-color .2s}
+.server-card:hover{transform:translateY(-3px);border-color:var(--accent)}
+.server-card .hdr{padding:14px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)}
+.server-card .hdr .name{font-weight:700;font-size:15px;color:#fff}
+.server-card .hdr .dot{width:12px;height:12px;border-radius:50%}
+.server-card .hdr .dot.online{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+.server-card .hdr .dot.offline{background:#666}
+.server-card .hdr .dot.checking{background:#ffd54a;animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.server-card .body{padding:14px 16px}
+.server-card .body .motd{font-size:12px;color:#a0c0a0;margin-bottom:6px;font-style:italic}
+.server-card .body .url{font-size:10px;color:var(--muted);word-break:break-all;margin-bottom:8px;font-family:monospace;background:rgba(0,0,0,.3);padding:4px 6px;border-radius:3px}
+.server-card .body .stats{display:flex;gap:15px;font-size:12px}
+.server-card .body .stats .v{color:var(--light);font-weight:700}
+.server-card .ftr{padding:10px 16px;background:rgba(0,0,0,.2);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.btn{padding:7px 14px;background:var(--accent);color:#fff;border:2px solid #000;border-radius:4px;font-family:inherit;font-weight:700;font-size:12px;cursor:pointer;text-shadow:1px 1px 0 #1a1a1a;transition:background .2s}
+.btn:hover{background:#6a9a4a}
+.btn:disabled{background:#555;cursor:not-allowed;opacity:.6}
+.btn.danger{background:var(--danger)}
+.btn.secondary{background:#7a7a7a}
+.btn.small{padding:4px 10px;font-size:11px}
+.btn.copy{background:#2a4a6a}
+.btn.copy:hover{background:#3a5a7a}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:200;padding:20px}
+.modal{background:var(--panel);border:2px solid var(--border);border-radius:10px;width:100%;max-width:500px;max-height:90vh;overflow-y:auto}
+.modal-hdr{padding:16px 20px;border-bottom:2px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.modal-hdr h2{color:var(--accent);font-size:1.3em}
+.modal-hdr .close{background:none;border:none;color:var(--muted);font-size:1.5em;cursor:pointer}
+.modal-body{padding:20px}
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:12px;color:#a0c0a0;margin-bottom:5px;font-weight:600}
+.form-group input{width:100%;padding:8px 10px;background:#0a0a1a;border:2px solid var(--border);color:var(--text);border-radius:4px;font-family:inherit;font-size:13px;outline:none}
+.form-group input:focus{border-color:var(--accent)}
+.alert{padding:10px 14px;border-radius:4px;font-size:12px;margin:10px 0;border-left:4px solid}
+.alert.ok{background:rgba(79,175,79,.1);border-color:var(--ok);color:var(--ok)}
+.alert.err{background:rgba(255,106,106,.1);border-color:#ff6a6a;color:#ff6a6a}
+.alert.info{background:rgba(90,138,58,.1);border-color:var(--accent);color:#a0c0a0}
+.console-box{background:#000;border:2px solid var(--border);border-radius:4px;padding:12px;height:350px;overflow-y:auto;font-family:'Consolas',monospace;font-size:12px;line-height:1.6}
+.console-box .line{color:#cfe8ff;white-space:pre-wrap;word-break:break-all}
+.console-box .line.err{color:#ff6a6a}
+.console-box .line.ok{color:var(--ok)}
+.console-box .line.cmd{color:#ffd54a}
+.console-box .line.sys{color:#888}
+.footer{text-align:center;padding:20px;color:#555;font-size:11px;border-top:1px solid var(--border);margin-top:30px}
+.created-info{background:rgba(79,175,79,.1);border:2px solid var(--ok);border-radius:8px;padding:16px;margin:16px 0}
+.created-info h3{color:var(--ok);margin-bottom:10px}
+.created-info .url-box{background:#0a0a1a;border:1px solid var(--border);padding:10px;border-radius:4px;font-family:monospace;font-size:12px;color:var(--light);word-break:break-all;margin:8px 0}
+</style>
+</head>
+<body>
+
+<div class="navbar">
+<div class="logo" onclick="showPage('home')">⛏️ Voxel<span>Host</span></div>
+<nav>
+<a class="active" id="nav-home" onclick="showPage('home')">Home</a>
+<a id="nav-servers" onclick="showPage('servers')">My Servers</a>
+<a id="nav-browser" onclick="showPage('browser')">Server Browser</a>
+<a id="nav-help" onclick="showPage('help')">Help</a>
+</nav>
+</div>
+
+<div class="container">
+
+<div id="page-home" class="page">
+<div class="hero">
+<h1>Host Free VoxelCraft Servers</h1>
+<p>Create your own multiplayer server in seconds — no setup required.</p>
+<button class="create-btn" onclick="openCreate()">⚡ Create New Server</button>
+</div>
+<div class="stats-row" id="homeStats">
+<div class="stat-card"><div class="icon">🌐</div><div><div class="num" id="hsTotal">0</div><div class="label">Public Servers</div></div></div>
+<div class="stat-card"><div class="icon">👥</div><div><div class="num" id="hsPlayers">0</div><div class="label">Players Online</div></div></div>
+<div class="stat-card"><div class="icon">🖥️</div><div><div class="num" id="hsMine">0</div><div class="label">My Servers</div></div></div>
+</div>
+<div class="section-title">
+<h2>🔥 Popular Servers</h2>
+<button class="btn secondary" onclick="refreshBrowser()">🔄 Refresh</button>
+</div>
+<div class="server-grid" id="popularGrid"></div>
+</div>
+
+<div id="page-servers" class="page hidden">
+<div class="section-title">
+<h2>📡 My Servers</h2>
+<button class="btn" onclick="openCreate()">+ Create New Server</button>
+</div>
+<div id="myServersGrid"></div>
+</div>
+
+<div id="page-browser" class="page hidden">
+<div class="section-title">
+<h2>🌐 All Public Servers</h2>
+<button class="btn secondary" onclick="refreshBrowser()">🔄 Refresh</button>
+</div>
+<div id="browserGrid"></div>
+</div>
+
+<div id="page-help" class="page hidden">
+<h2 style="color:#fff;margin-bottom:16px">Help & FAQ</h2>
+<div style="background:var(--panel);border:2px solid var(--border);border-radius:8px;padding:20px;margin-bottom:16px">
+<h3 style="color:var(--accent);margin-bottom:10px">How does it work?</h3>
+<p style="font-size:13px;color:#a0c0a0;margin-bottom:8px">VoxelHost creates isolated "rooms" on the VoxelHost game server. Each room is a separate server — players in different rooms can't see each other. When you create a server, you get a unique <code>wss://</code> link that players use to join.</p>
+</div>
+<div style="background:var(--panel);border:2px solid var(--border);border-radius:8px;padding:20px;margin-bottom:16px">
+<h3 style="color:var(--accent);margin-bottom:10px">How to join a server</h3>
+<ol style="font-size:13px;color:#a0c0a0;margin-left:20px;line-height:2">
+<li>Open <a href="https://voxelcraft-browser.netlify.app" target="_blank" style="color:var(--light)">VoxelCraft</a></li>
+<li>Click Multiplayer</li>
+<li>Click "+ Add Server"</li>
+<li>Paste the <code>wss://</code> link from VoxelHost</li>
+<li>Click Join!</li>
+</ol>
+</div>
+<div style="background:var(--panel);border:2px solid var(--border);border-radius:8px;padding:20px">
+<h3 style="color:var(--accent);margin-bottom:10px">Console Commands</h3>
+<p style="font-size:12px;color:#a0c0a0"><code>/list</code> — list players · <code>/kick &lt;name&gt;</code> — kick · <code>/say &lt;msg&gt;</code> — broadcast · <code>/info</code> — server info · <code>/help</code> — all commands</p>
+</div>
+</div>
+
+</div>
+
+<div id="createModal" class="modal-bg hidden" onclick="if(event.target===this)closeCreate()">
+<div class="modal">
+<div class="modal-hdr"><h2>Create New Server</h2><button class="close" onclick="closeCreate()">✕</button></div>
+<div class="modal-body">
+<div class="form-group">
+<label>Server Name</label>
+<input id="cName" placeholder="e.g. Survival World" maxlength="50">
+<div id="nameCheck" style="font-size:11px;margin-top:4px"></div>
+</div>
+<div class="form-group">
+<label>MOTD (Message of the Day)</label>
+<input id="cMotd" placeholder="Welcome to my server!" maxlength="100">
+</div>
+<div class="form-group">
+<label>Max Players</label>
+<input id="cMax" type="number" value="20" min="1" max="50">
+</div>
+<div class="form-group">
+<label>Admin Password (for console commands)</label>
+<input id="cPw" type="password" value="voxelcraft">
+</div>
+<div id="createResult"></div>
+<div style="display:flex;gap:8px;margin-top:16px">
+<button class="btn secondary" onclick="closeCreate()" style="flex:1">Cancel</button>
+<button class="btn" onclick="createServer()" style="flex:2" id="createBtn">⚡ Create Server</button>
+</div>
+</div>
+</div>
+</div>
+
+<div id="consoleModal" class="modal-bg hidden" onclick="if(event.target===this)closeConsole()">
+<div class="modal" style="max-width:700px">
+<div class="modal-hdr"><h2 id="cmTitle">Server Console</h2><button class="close" onclick="closeConsole()">✕</button></div>
+<div class="modal-body">
+<div style="display:flex;gap:6px;margin-bottom:10px;align-items:center">
+<input id="cmPw" type="password" value="voxelcraft" placeholder="Admin password" style="flex:1">
+<button class="btn" id="cmConn" onclick="connectAdmin()">Connect</button>
+<button class="btn danger" id="cmDisc" onclick="disconnectAdmin()" disabled>Disconnect</button>
+</div>
+<div class="console-box" id="cmConsole"><div class="line sys">[Connect to run commands]</div></div>
+<div style="display:flex;gap:6px;margin-top:8px">
+<input id="cmCmd" placeholder="/list (press Enter)" onkeydown="if(event.key==='Enter')runCmd()" style="flex:1;font-family:Consolas,monospace">
+<button class="btn" onclick="runCmd()">Run</button>
+</div>
+<div style="display:flex;gap:4px;margin-top:6px;flex-wrap:wrap">
+<button class="btn secondary small" onclick="qc('list')">📋 List</button>
+<button class="btn secondary small" onclick="qc('info')">ℹ️ Info</button>
+<button class="btn secondary small" onclick="qc('help')">❓ Help</button>
+</div>
+</div>
+</div>
+</div>
+
+<div class="footer">
+<p>VoxelHost · Free VoxelCraft Server Hosting · Not affiliated with Mojang</p>
+</div>
+
+<script>
+const SERVER = 'wss://voxelhostjs.onrender.com';
+const HTTP = 'https://voxelhostjs.onrender.com';
+
+const KEY = 'voxelhost_myservers';
+let myServers = [];
+let selectedRoom = null;
+let adminWs = null;
+let adminConn = false;
+
+function load() { try { myServers = JSON.parse(localStorage.getItem(KEY)) || []; } catch { myServers = []; } }
+function save() { try { localStorage.setItem(KEY, JSON.stringify(myServers)); } catch {} }
+
+function showPage(p) {
+  document.querySelectorAll('.page').forEach(x => x.classList.add('hidden'));
+  document.getElementById('page-' + p).classList.remove('hidden');
+  document.querySelectorAll('.navbar nav a').forEach(a => a.classList.remove('active'));
+  document.getElementById('nav-' + p).classList.add('active');
+  if (p === 'home') { refreshBrowser(); updateHomeStats(); }
+  if (p === 'servers') renderMyServers();
+  if (p === 'browser') refreshBrowser();
+}
+
+async function fetchStatus(roomId) {
+  try {
+    const url = roomId ? `${HTTP}/status?room=${roomId}` : `${HTTP}/status`;
+    const res = await fetch(url, { mode: 'cors', signal: AbortSignal.timeout(5000) });
+    if (res.ok) return await res.json();
+  } catch {}
+  return null;
+}
+
+async function fetchRooms() {
+  try {
+    const res = await fetch(`${HTTP}/rooms`, { mode: 'cors', signal: AbortSignal.timeout(5000) });
+    if (res.ok) return (await res.json()).rooms || [];
+  } catch {}
+  return [];
+}
+
+async function updateHomeStats() {
+  const rooms = await fetchRooms();
+  let players = 0;
+  for (const r of rooms) players += r.playerCount;
+  document.getElementById('hsTotal').textContent = rooms.length;
+  document.getElementById('hsPlayers').textContent = players;
+  document.getElementById('hsMine').textContent = myServers.length;
+}
+
+async function refreshBrowser() {
+  const rooms = await fetchRooms();
+  rooms.sort((a, b) => b.playerCount - a.playerCount);
+  const html = rooms.length === 0
+    ? '<p style="color:#888;text-align:center;padding:20px">No servers online. Create one!</p>'
+    : '<div class="server-grid">' + rooms.map(r => serverCard(r)).join('') + '</div>';
+  document.getElementById('popularGrid').innerHTML = html;
+  document.getElementById('browserGrid').innerHTML = html;
+  updateHomeStats();
+}
+
+function serverCard(r) {
+  const url = `${SERVER}?room=${r.roomId}`;
+  const isMine = myServers.find(s => s.roomId === r.roomId);
+  return `<div class="server-card">
+    <div class="hdr"><span class="name">${esc(r.name)}</span><span class="dot online"></span></div>
+    <div class="body">
+      <div class="motd">${esc(r.motd || '—')}</div>
+      <div class="url">${esc(url)}</div>
+      <div class="stats">
+        <div>👥 <span class="v">${r.playerCount}/${r.maxPlayers}</span></div>
+        <div>🆔 <span class="v">${r.roomId.slice(0,8)}</span></div>
+      </div>
+    </div>
+    <div class="ftr">
+      <button class="btn copy small" onclick="copyUrl('${esc(url)}')">📋 Copy Link</button>
+      <button class="btn small" onclick="openVoxelCraft('${esc(url)}')">🎮 Join</button>
+      ${isMine ? `<button class="btn secondary small" onclick="openConsole('${r.roomId}','${esc(r.name)}','${esc(isMine.pw||'voxelcraft')}')">🖥️ Console</button>` : ''}
+      ${isMine ? `<button class="btn danger small" onclick="deleteServer('${r.roomId}')">🗑️ Delete</button>` : ''}
+    </div>
+  </div>`;
+}
+
+function renderMyServers() {
+  const el = document.getElementById('myServersGrid');
+  if (myServers.length === 0) {
+    el.innerHTML = '<div style="text-align:center;padding:40px"><p style="color:#888;font-size:16px;margin-bottom:12px">You haven\'t created any servers yet!</p><button class="btn" onclick="openCreate()">+ Create Your First Server</button></div>';
+    return;
+  }
+  el.innerHTML = '<p style="color:#888;text-align:center;padding:20px">Loading...</p>';
+  Promise.all(myServers.map(async s => { s._status = await fetchStatus(s.roomId); return s; })).then(servers => {
+    el.innerHTML = '<div class="server-grid">' + servers.map(s => {
+      const r = s._status || { name: s.name, motd: s.motd, playerCount: 0, maxPlayers: s.maxPlayers || 20, roomId: s.roomId };
+      return serverCard({ ...r, roomId: s.roomId });
+    }).join('') + '</div>';
+  });
+}
+
+function openCreate() {
+  document.getElementById('createModal').classList.remove('hidden');
+  document.getElementById('cName').value = '';
+  document.getElementById('cMotd').value = '';
+  document.getElementById('cMax').value = '20';
+  document.getElementById('createResult').innerHTML = '';
+  document.getElementById('cName').oninput = checkName;
+}
+
+function closeCreate() { document.getElementById('createModal').classList.add('hidden'); }
+
+async function checkName() {
+  const name = document.getElementById('cName').value.trim().toLowerCase();
+  const el = document.getElementById('nameCheck');
+  if (!name) { el.innerHTML = ''; return; }
+  for (const s of myServers) {
+    if (s.name.toLowerCase() === name) { el.innerHTML = '<span style="color:#ff6a6a">❌ You already have a server with this name</span>'; return; }
+  }
+  const rooms = await fetchRooms();
+  for (const r of rooms) {
+    if (r.name.toLowerCase() === name) { el.innerHTML = '<span style="color:#ff6a6a">❌ Name already taken by another server</span>'; return; }
+  }
+  el.innerHTML = '<span style="color:#4CAF50">✅ Name available!</span>';
+}
+
+async function createServer() {
+  const name = document.getElementById('cName').value.trim();
+  const motd = document.getElementById('cMotd').value.trim() || name;
+  const maxPlayers = parseInt(document.getElementById('cMax').value) || 20;
+  const pw = document.getElementById('cPw').value || 'voxelcraft';
+  if (!name) { alert('Enter a server name'); return; }
+  document.getElementById('createBtn').disabled = true;
+  document.getElementById('createBtn').textContent = 'Creating...';
+  try {
+    const res = await fetch(`${HTTP}/create-room`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, motd, maxPlayers }),
+    });
+    const data = await res.json();
+    if (data.roomId) {
+      const fullUrl = `${SERVER}?room=${data.roomId}`;
+      myServers.push({ roomId: data.roomId, name: data.name, motd: data.motd, maxPlayers: data.maxPlayers, pw, url: fullUrl, created: Date.now() });
+      save();
+      document.getElementById('createResult').innerHTML = `
+        <div class="created-info">
+          <h3>✅ Server Created!</h3>
+          <p style="font-size:13px;color:#a0c0a0;margin-bottom:8px">Your server is live! Share this link with friends:</p>
+          <div class="url-box">${esc(fullUrl)}</div>
+          <div style="display:flex;gap:6px">
+            <button class="btn copy" onclick="copyUrl('${esc(fullUrl)}')">📋 Copy Link</button>
+            <button class="btn" onclick="openVoxelCraft('${esc(fullUrl)}')">🎮 Join Now</button>
+          </div>
+        </div>`;
+      document.getElementById('createBtn').textContent = '✅ Done';
+      refreshBrowser();
+    } else { throw new Error('No roomId'); }
+  } catch(e) {
+    document.getElementById('createResult').innerHTML = `<div class="alert err">❌ Failed to create server: ${esc(e.message)}. Make sure the game server is running.</div>`;
+    document.getElementById('createBtn').disabled = false;
+    document.getElementById('createBtn').textContent = '⚡ Create Server';
+  }
+}
+
+function deleteServer(roomId) {
+  if (!confirm('Remove this server from your list? (The room stays active until empty)')) return;
+  myServers = myServers.filter(s => s.roomId !== roomId);
+  save();
+  renderMyServers();
+}
+
+function copyUrl(url) {
+  navigator.clipboard?.writeText(url).then(() => alert('Copied: ' + url)).catch(() => prompt('Copy this URL:', url));
+}
+
+function openVoxelCraft(url) {
+  copyUrl(url);
+  window.open('https://voxelcraft-browser.netlify.app', '_blank');
+}
+
+function openConsole(roomId, name, pw) {
+  selectedRoom = roomId;
+  document.getElementById('cmTitle').textContent = 'Console: ' + name;
+  document.getElementById('cmPw').value = pw || 'voxelcraft';
+  document.getElementById('cmConsole').innerHTML = '<div class="line sys">[Click Connect to start]</div>';
+  if (adminConn) disconnectAdmin();
+  document.getElementById('consoleModal').classList.remove('hidden');
+}
+
+function closeConsole() {
+  document.getElementById('consoleModal').classList.add('hidden');
+  if (adminConn) disconnectAdmin();
+}
+
+function logC(text, cls) {
+  const el = document.getElementById('cmConsole');
+  const l = document.createElement('div');
+  l.className = 'line ' + (cls||'');
+  l.textContent = text;
+  el.appendChild(l);
+  el.scrollTop = el.scrollHeight;
+}
+
+function connectAdmin() {
+  if (!selectedRoom) return;
+  const pw = document.getElementById('cmPw').value;
+  const url = `${SERVER}?room=${selectedRoom}`;
+  logC('[Connecting...]', 'sys');
+  try { adminWs = new WebSocket(url); } catch(e) { logC('[Error: ' + e.message + ']', 'err'); return; }
+  adminWs.onopen = () => { logC('[Connected. Authenticating...]', 'sys'); adminWs.send(JSON.stringify({ type: 'admin_auth', password: pw })); };
+  adminWs.onmessage = (ev) => {
+    try {
+      const msg = JSON.parse(ev.data);
+      if (msg.type === 'admin_auth_result') {
+        if (msg.success) {
+          adminConn = true;
+          document.getElementById('cmConn').disabled = true;
+          document.getElementById('cmDisc').disabled = false;
+          logC('[Authenticated! Type /help for commands.]', 'ok');
+        } else { logC('[Auth failed: ' + (msg.error||'wrong password') + ']', 'err'); adminWs.close(); }
+      } else if (msg.type === 'admin_output') { logC(msg.text, ''); }
+      else if (msg.type === 'chat_msg') { logC('<' + msg.data.username + '> ' + msg.data.msg, 'sys'); }
+      else if (msg.type === 'disconnect') { logC('[Server: ' + (msg.reason||'disconnected') + ']', 'err'); }
+    } catch {}
+  };
+  adminWs.onerror = () => logC('[WebSocket error]', 'err');
+  adminWs.onclose = () => {
+    adminConn = false; adminWs = null;
+    document.getElementById('cmConn').disabled = false;
+    document.getElementById('cmDisc').disabled = true;
+    logC('[Disconnected]', 'sys');
+  };
+}
+
+function disconnectAdmin() { if (adminWs) { adminWs.close(); adminWs = null; } }
+
+function runCmd() {
+  const input = document.getElementById('cmCmd');
+  const raw = input.value.trim();
+  if (!raw || !adminConn) return;
+  logC('> ' + raw, 'cmd');
+  const parts = raw.replace(/^[/.]/, '').split(/\s+/);
+  adminWs.send(JSON.stringify({ type: 'admin_command', command: parts[0].toLowerCase(), args: parts.slice(1) }));
+  input.value = '';
+}
+
+function qc(cmd) { document.getElementById('cmCmd').value = '/' + cmd; runCmd(); }
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+load();
+showPage('home');
+setInterval(() => { if (!document.getElementById('page-home').classList.contains('hidden')) { refreshBrowser(); updateHomeStats(); } }, 15000);
+</script>
+</body>
+</html>

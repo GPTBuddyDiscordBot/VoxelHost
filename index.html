@@ -343,7 +343,7 @@ async function createServer() {
     const res = await fetch(`${HTTP}/create-room`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, motd, maxPlayers }),
+      body: JSON.stringify({ name, motd, maxPlayers, adminPassword: pw }),
     });
     const data = await res.json();
     if (data.roomId) {
@@ -370,11 +370,30 @@ async function createServer() {
   }
 }
 
-function deleteServer(roomId) {
-  if (!confirm('Remove this server from your list? (The room stays active until empty)')) return;
-  myServers = myServers.filter(s => s.roomId !== roomId);
+async function deleteServer(roomId) {
+  if (!confirm('Delete this server? This will kick all players and remove the room permanently.')) return;
+  const s = myServers.find(x => x.roomId === roomId);
+  if (!s) return;
+  const pw = s.pw || 'voxelcraft';
+  try {
+    const res = await fetch(`${HTTP}/delete-room`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ roomId, password: pw }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert('✅ Server deleted!');
+    } else {
+      alert('⚠️ Could not delete from server (it will auto-clean when empty).');
+    }
+  } catch(e) {
+    alert('⚠️ Server unreachable — removed from your list only.');
+  }
+  myServers = myServers.filter(x => x.roomId !== roomId);
   save();
   renderMyServers();
+  refreshBrowser();
 }
 
 function copyUrl(url) {
@@ -413,9 +432,12 @@ function connectAdmin() {
   if (!selectedRoom) return;
   const pw = document.getElementById('cmPw').value;
   const url = `${SERVER}?room=${selectedRoom}`;
-  logC('[Connecting...]', 'sys');
+  logC('[Connecting to ' + url + '...]', 'sys');
   try { adminWs = new WebSocket(url); } catch(e) { logC('[Error: ' + e.message + ']', 'err'); return; }
-  adminWs.onopen = () => { logC('[Connected. Authenticating...]', 'sys'); adminWs.send(JSON.stringify({ type: 'admin_auth', password: pw })); };
+  adminWs.onopen = () => {
+    logC('[Connected. Authenticating with password: ' + pw + '...]', 'sys');
+    adminWs.send(JSON.stringify({ type: 'admin_auth', password: pw }));
+  };
   adminWs.onmessage = (ev) => {
     try {
       const msg = JSON.parse(ev.data);
@@ -424,14 +446,14 @@ function connectAdmin() {
           adminConn = true;
           document.getElementById('cmConn').disabled = true;
           document.getElementById('cmDisc').disabled = false;
-          logC('[Authenticated! Type /help for commands.]', 'ok');
-        } else { logC('[Auth failed: ' + (msg.error||'wrong password') + ']', 'err'); adminWs.close(); }
+          logC('[✅ Authenticated! Type /help for commands.]', 'ok');
+        } else { logC('[❌ Auth failed: ' + (msg.error||'wrong password') + ']', 'err'); adminWs.close(); }
       } else if (msg.type === 'admin_output') { logC(msg.text, ''); }
       else if (msg.type === 'chat_msg') { logC('<' + msg.data.username + '> ' + msg.data.msg, 'sys'); }
       else if (msg.type === 'disconnect') { logC('[Server: ' + (msg.reason||'disconnected') + ']', 'err'); }
     } catch {}
   };
-  adminWs.onerror = () => logC('[WebSocket error]', 'err');
+  adminWs.onerror = () => logC('[WebSocket error — check the server URL.]', 'err');
   adminWs.onclose = () => {
     adminConn = false; adminWs = null;
     document.getElementById('cmConn').disabled = false;
